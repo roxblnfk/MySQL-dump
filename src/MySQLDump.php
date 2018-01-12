@@ -10,14 +10,15 @@
  */
 class MySQLDump
 {
-	const MAX_SQL_SIZE = 1e6;
+	public static $MAX_SQL_SIZE = 1e6;
+	public static $MAX_INSERT_LINES = 2000;
 
-	const NONE = 0;
-	const DROP = 1;
-	const CREATE = 2;
-	const DATA = 4;
+	const NONE     = 0;
+	const DROP     = 1;
+	const CREATE   = 2;
+	const DATA     = 4;
 	const TRIGGERS = 8;
-	const ALL = 15; // DROP | CREATE | DATA | TRIGGERS
+	const ALL      = 15; // DROP | CREATE | DATA | TRIGGERS
 
 	/** @var array */
 	public $tables = array(
@@ -150,6 +151,7 @@ class MySQLDump
 
 			$size = 0;
 			$res = $this->connection->query("SELECT * FROM $delTable", MYSQLI_USE_RESULT);
+			$lines = 0;
 			while ($row = $res->fetch_assoc()) {
 				$s = '(';
 				foreach ($row as $key => $value) {
@@ -168,14 +170,16 @@ class MySQLDump
 					$s = ",\n$s";
 				}
 
+				++$lines;
 				$len = strlen($s) - 1;
 				$s[$len - 1] = ')';
 				fwrite($handle, $s, $len);
 
 				$size += $len;
-				if ($size > self::MAX_SQL_SIZE) {
+				if ($size > self::$MAX_SQL_SIZE || $lines >= self::$MAX_INSERT_LINES) {
 					fwrite($handle, ";\n");
 					$size = 0;
+					$lines = 0;
 				}
 			}
 
